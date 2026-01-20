@@ -714,15 +714,6 @@ export default function Game({ token, userId, username, email }: GameProps) {
                 })()}
               </div>
 
-              {/* Debug Info - Remove this after fixing */}
-              <div className="text-center text-xs text-muted-foreground mb-4 p-2 bg-neutral-50 border">
-                <div>Debug: mySymbol={mySymbol}, currentTurn={currentTurn}, gameStatus={gameStatus}</div>
-                <div>isMyTurn={isMyTurn ? 'true' : 'false'}, inRoom={inRoom ? 'true' : 'false'}, connected={connected ? 'true' : 'false'}</div>
-                <div>Server says my symbol: {players.find(p => p.username === username)?.symbol || 'unknown'}</div>
-                <div>Players: {JSON.stringify(players)}</div>
-                <div>Current player: {JSON.stringify(players.find(p => p.symbol === currentTurn))}</div>
-              </div>
-
               {/* Actions */}
               <div className="flex gap-2">
                 {result && (
