@@ -150,6 +150,44 @@ export async function createRoom(roomName: string, isPrivate: boolean = false, m
   }
 }
 
+// Fetch user stats from /me/stats endpoint
+export async function fetchUserStats(): Promise<{
+  user_id: string;
+  total_games: number | null;
+  wins: number | null;
+  losses: number | null;
+  draws: number | null;
+  current_streak: number | null;
+  longest_streak: number | null;
+  updated_at: string | null;
+} | null> {
+  const token = getToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(`${API_BASE}/me/stats`, {
+      headers: {
+        'Authorization': `${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Token is invalid, clear auth data
+        logout();
+      }
+      return null;
+    }
+
+    const data = await response.json();
+    return data.stats;
+  } catch (error) {
+    console.error('Failed to fetch user stats:', error);
+    return null;
+  }
+}
+
 // Clear all auth data
 export function logout(): void {
   removeToken();

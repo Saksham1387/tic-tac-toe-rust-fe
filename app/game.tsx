@@ -1,7 +1,8 @@
 "use client"
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { WS_URL, logout, createRoom } from '@/lib/auth';
+import { WS_URL, logout, createRoom, fetchUserStats } from '@/lib/auth';
+import Image from 'next/image';
 
 interface Player {
   username: string;
@@ -46,6 +47,16 @@ export default function Game({ token, userId, username, email }: GameProps) {
   const [isWaitingInQueue, setIsWaitingInQueue] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [userStats, setUserStats] = useState<{
+    user_id: string;
+    total_games: number | null;
+    wins: number | null;
+    losses: number | null;
+    draws: number | null;
+    current_streak: number | null;
+    longest_streak: number | null;
+    updated_at: string | null;
+  } | null>(null);
 
   const updateBoard = useCallback((serverBoard: (string | null)[][]) => {
     const flatBoard: (string | null)[] = [];
@@ -410,6 +421,17 @@ export default function Game({ token, userId, username, email }: GameProps) {
     };
   }, [connect]);
 
+  // Fetch user stats on mount
+  useEffect(() => {
+    const loadStats = async () => {
+      const stats = await fetchUserStats();
+      if (stats) {
+        setUserStats(stats);
+      }
+    };
+    loadStats();
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -489,16 +511,57 @@ export default function Game({ token, userId, username, email }: GameProps) {
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-md animate-fade-in">
+        <div className="w-full max-w-4xl animate-fade-in">
           {!inRoom && !isWaitingInQueue ? (
             // Room Join Screen
-            <div className="text-center">
-              <h2 className="text-xl font-bold mb-2">Join or Create a Room</h2>
-              <p className="text-sm text-muted-foreground mb-8">
-                Enter a room ID to join, create a new room, or find a random match
-              </p>
+            <div className="flex gap-8 items-start">
+              {/* Left Sidebar - Stats */}
+              <div className="w-64 shrink-0">
+                <div className="border border-border p-4">
+                  <h3 className="text-sm font-bold mb-4 text-black">Your Stats</h3>
+                  {userStats ? (
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Games:</span>
+                        <span className="font-medium text-black">{userStats.total_games ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Wins:</span>
+                        <span className="font-medium text-black">{userStats.wins ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Losses:</span>
+                        <span className="font-medium text-black">{userStats.losses ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Draws:</span>
+                        <span className="font-medium text-black">{userStats.draws ?? 0}</span>
+                      </div>
+                      <div className="pt-2 border-t border-border">
+                        <div className="flex justify-between mb-2">
+                          <span className="text-muted-foreground">Current Streak:</span>
+                          <span className="font-medium text-black">{userStats.current_streak ?? 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Longest Streak:</span>
+                          <span className="font-medium text-black">{userStats.longest_streak ?? 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">Loading stats...</div>
+                  )}
+                </div>
+              </div>
 
-              <div className="space-y-4">
+              {/* Right Content - Room Options */}
+              <div className="flex-1 text-center">
+                <h2 className="text-xl font-bold mb-2">Join or Create a Room</h2>
+                <p className="text-sm text-muted-foreground mb-8">
+                  Enter a room ID to join, create a new room, or find a random match
+                </p>
+
+                <div className="max-w-md mx-auto space-y-4">
                 {!showCreateRoom ? (
                   <>
                     <input
@@ -573,6 +636,7 @@ export default function Game({ token, userId, username, email }: GameProps) {
                     {error}
                   </div>
                 )}
+                </div>
               </div>
             </div>
           ) : isWaitingInQueue ? (
@@ -608,135 +672,177 @@ export default function Game({ token, userId, username, email }: GameProps) {
             </div>
           ) : (
             // Game Screen
-            <div>
-              {/* Game Info */}
-              <div className="text-center mb-8">
-                <div className="text-sm text-muted-foreground mb-1">
-                  {roomName ? (
-                    <>
-                      <div className="font-medium text-black">{roomName}</div>
-                      <div className="text-xs">Room ID: {roomId}</div>
-                    </>
+            <div className="flex gap-8 items-start">
+              {/* Left Sidebar - Stats and Actions */}
+              <div className="w-64 shrink-0 space-y-6">
+                {/* User Stats */}
+                <div className="border border-border p-4">
+                  <h3 className="text-sm font-bold mb-4 text-black">Your Stats</h3>
+                  {userStats ? (
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Games:</span>
+                        <span className="font-medium text-black">{userStats.total_games ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Wins:</span>
+                        <span className="font-medium text-black">{userStats.wins ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Losses:</span>
+                        <span className="font-medium text-black">{userStats.losses ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Draws:</span>
+                        <span className="font-medium text-black">{userStats.draws ?? 0}</span>
+                      </div>
+                      <div className="pt-2 border-t border-border">
+                        <div className="flex justify-between mb-2">
+                          <span className="text-muted-foreground">Current Streak:</span>
+                          <span className="font-medium text-black">{userStats.current_streak ?? 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Longest Streak:</span>
+                          <span className="font-medium text-black">{userStats.longest_streak ?? 0}</span>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
-                    <>Room: {roomId}</>
+                    <div className="text-sm text-muted-foreground">Loading stats...</div>
                   )}
                 </div>
-                
-                {/* Players List */}
-                {players.length > 0 && (
-                  <div className="mb-4">
-                    <div className="text-xs text-muted-foreground mb-2">Players in room:</div>
-                    <div className="flex justify-center gap-4">
-                      {players.map((player, index) => (
-                        <div key={index} className="flex items-center gap-2 text-sm">
-                          <span className={`w-6 h-6 border-2 border-black flex items-center justify-center text-xs font-bold ${
-                            currentTurn === player.symbol ? 'bg-black text-white' : 'bg-white'
-                          }`}>
-                            {player.symbol === 'X' ? '×' : '○'}
-                          </span>
-                          <span className={`${player.username === username ? 'font-bold' : ''}`}>
-                            {player.username === username ? 'You' : player.username}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                {/* Game Status Display */}
-                {gameStatus === 'waiting' && (
-                  <div className="flex flex-col items-center gap-3 mb-4">
-                    <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                    <div className="text-sm font-medium text-black">
-                      Waiting for the other person to join
-                    </div>
-                  </div>
-                )}
-                
-                {gameStatus === 'InProgress' && players.length === 2 && (
-                  <div className="mt-2 text-lg font-medium">
-                    {(() => {
-                      const currentPlayer = players.find(p => p.symbol === currentTurn);
-                      return isMyTurn ? 'Your turn' : `${currentPlayer?.username}'s turn`;
-                    })()}
-                  </div>
-                )}
-
-                {gameStatus === 'Completed' && !result && (
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    Game completed
-                  </div>
-                )}
-
-                {result && (
-                  <div className="mt-2 text-lg font-bold animate-scale-in">
-                    {result.isDraw ? 'Draw!' : result.winner === username ? 'You won!' : `${result.winner} won!`}
-                  </div>
-                )}
-              </div>
-
-              {/* Board */}
-              <div className="grid grid-cols-3 gap-2 mb-8">
-                {board.map((cell, index) => (
+                {/* Actions */}
+                <div className="space-y-2">
+                  {result && (
+                    <button
+                      onClick={playAgain}
+                      className="w-full py-3 bg-black text-white text-sm font-medium hover:bg-neutral-800 transition-colors"
+                    >
+                      Play Again
+                    </button>
+                  )}
                   <button
-                    key={index}
-                    onClick={() => makeMove(index)}
-                    disabled={!inRoom || gameStatus !== 'InProgress' || cell !== null || !isMyTurn}
-                    className={`
-                      aspect-square border-2 border-black flex items-center justify-center text-4xl font-bold
-                      transition-all duration-150
-                      ${!cell && isMyTurn && gameStatus === 'InProgress' 
-                        ? 'hover:bg-neutral-100 cursor-pointer' 
-                        : 'cursor-default'}
-                      ${cell ? 'bg-white' : 'bg-white'}
-                    `}
+                    onClick={leaveRoom}
+                    className="w-full py-3 border-2 border-black text-black text-sm font-medium hover:bg-neutral-100 transition-colors"
                   >
-                    {cell === 'X' && <span className="animate-scale-in">×</span>}
-                    {cell === 'O' && <span className="animate-scale-in">○</span>}
+                    Leave Room
                   </button>
-                ))}
-              </div>
-
-              {/* Your Symbol */}
-              <div className="text-center text-sm text-muted-foreground mb-6">
-                {(() => {
-                  // Use server data as authoritative source for display
-                  const myPlayerData = players.find(p => p.username === username);
-                  const displaySymbol = myPlayerData?.symbol || mySymbol;
-                  return (
-                    <>
-                      You are <span className="font-bold text-black">{displaySymbol === 'X' ? '×' : '○'}</span>
-                      {myPlayerData?.symbol !== mySymbol && (
-                        <span className="text-red-500 text-xs ml-2">(sync issue detected)</span>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                {result && (
-                  <button
-                    onClick={playAgain}
-                    className="flex-1 py-3 bg-black text-white text-sm font-medium hover:bg-neutral-800 transition-colors"
-                  >
-                    Play Again
-                  </button>
-                )}
-                <button
-                  onClick={leaveRoom}
-                  className={`${result ? 'flex-1' : 'w-full'} py-3 border-2 border-black text-black text-sm font-medium hover:bg-neutral-100 transition-colors`}
-                >
-                  Leave Room
-                </button>
-              </div>
-
-              {error && (
-                <div className="mt-4 text-sm text-black bg-muted border border-border p-3 animate-scale-in text-center">
-                  {error}
                 </div>
-              )}
+              </div>
+
+              {/* Center - Game Board */}
+              <div className="flex-1">
+                {/* Game Info */}
+                <div className="text-center mb-8">
+                  <div className="text-sm text-muted-foreground mb-1">
+                    {roomName ? (
+                      <>
+                        <div className="font-medium text-black">{roomName}</div>
+                        <div className="text-xs">Room ID: {roomId}</div>
+                      </>
+                    ) : (
+                      <>Room: {roomId}</>
+                    )}
+                  </div>
+                  
+                  {/* Players List */}
+                  {players.length > 0 && (
+                    <div className="mb-4">
+                      <div className="text-xs text-muted-foreground mb-2">Players in room:</div>
+                      <div className="flex justify-center gap-4">
+                        {players.map((player, index) => (
+                          <div key={index} className="flex items-center gap-2 text-sm">
+                            <span className={`w-6 h-6 border-2 border-black flex items-center justify-center text-xs font-bold ${
+                              currentTurn === player.symbol ? 'bg-black text-white' : 'bg-white'
+                            }`}>
+                              {player.symbol === 'X' ? '×' : '○'}
+                            </span>
+                            <span className={`${player.username === username ? 'font-bold' : ''}`}>
+                              {player.username === username ? 'You' : player.username}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Game Status Display */}
+                  {gameStatus === 'waiting' && (
+                    <div className="flex flex-col items-center gap-3 mb-4">
+                      <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                      <div className="text-sm font-medium text-black">
+                        Waiting for the other person to join
+                      </div>
+                    </div>
+                  )}
+                  
+                  {gameStatus === 'InProgress' && players.length === 2 && (
+                    <div className="mt-2 text-lg font-medium">
+                      {(() => {
+                        const currentPlayer = players.find(p => p.symbol === currentTurn);
+                        return isMyTurn ? 'Your turn' : `${currentPlayer?.username}'s turn`;
+                      })()}
+                    </div>
+                  )}
+
+                  {gameStatus === 'Completed' && !result && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      Game completed
+                    </div>
+                  )}
+
+                  {result && (
+                    <div className="mt-2 text-lg font-bold animate-scale-in">
+                      {result.isDraw ? 'Draw!' : result.winner === username ? 'You won!' : `${result.winner} won!`}
+                    </div>
+                  )}
+                </div>
+
+                {/* Board */}
+                <div className="grid grid-cols-3 gap-2 mb-8 max-w-md mx-auto">
+                  {board.map((cell, index) => (
+                    <button
+                      key={index}
+                      onClick={() => makeMove(index)}
+                      disabled={!inRoom || gameStatus !== 'InProgress' || cell !== null || !isMyTurn}
+                      className={`
+                        aspect-square border-2 border-black flex items-center justify-center text-4xl font-bold
+                        transition-all duration-150
+                        ${!cell && isMyTurn && gameStatus === 'InProgress' 
+                          ? 'hover:bg-neutral-100 cursor-pointer' 
+                          : 'cursor-default'}
+                        ${cell ? 'bg-white' : 'bg-white'}
+                      `}
+                    >
+                      {cell === 'X' && <span className="animate-scale-in">×</span>}
+                      {cell === 'O' && <span className="animate-scale-in">○</span>}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Your Symbol */}
+                <div className="text-center text-sm text-muted-foreground mb-6">
+                  {(() => {
+                    // Use server data as authoritative source for display
+                    const myPlayerData = players.find(p => p.username === username);
+                    const displaySymbol = myPlayerData?.symbol || mySymbol;
+                    return (
+                      <>
+                        {myPlayerData?.symbol !== mySymbol && (
+                          <span className="text-red-500 text-xs ml-2">(sync issue detected)</span>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {error && (
+                  <div className="text-sm text-black bg-muted border border-border p-3 animate-scale-in text-center">
+                    {error}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -754,8 +860,11 @@ export default function Game({ token, userId, username, email }: GameProps) {
 
       {/* Footer */}
       <footer className="border-t border-border px-6 py-4">
-        <div className="max-w-2xl mx-auto text-center text-sm text-muted-foreground">
+        <div className=" justify-center items-center text-center text-sm  flex flex-row gap-5 text-muted-foreground">
           Made by Saksham 
+          <a href='https://x.com/Saksham1184122'>
+          <Image src="/twitter.png" className='w-5 h-5' alt="Twitter" width={10} height={10}/>
+          </a>
         </div>
       </footer>
     </div>
