@@ -172,6 +172,14 @@ export default function Game({ token, userId, username, email }: GameProps) {
         } else {
           setResult({ isDraw: true });
         }
+        // Refetch stats immediately after game completion
+        const loadStats = async () => {
+          const stats = await fetchUserStats();
+          if (stats) {
+            setUserStats(stats);
+          }
+        };
+        loadStats();
         break;
 
       case 'player_left':
